@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
-    phone: {
+    telegram: {
         type: String,
         required: true,
         unique: true

@@ -1,4 +1,6 @@
 import User from "../../models/userModel.js";
+import validator from "validator";
+import bcrypt from "bcryptjs";
 
 export const getUser = async (req, res) => {
     try {
@@ -12,19 +14,19 @@ export const getUser = async (req, res) => {
 
 export const register = async (req, res) => {
     try {
-        const { name, email, phone, password } = req.body;
+        const { name, email, telegram, password } = req.body;
 
-        // Validasi input
-        if (!name || !email || !phone || !password) {
+        // Input validation
+        if (!name || !email || !telegram || !password) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required"
             });
         }
 
-        // Cek apakah user sudah ada
+        // Check if user already exists
         const userExist = await User.findOne({
-            $or: [{ phone }, { email }]
+            $or: [{ telegram }, { email }]
         });
         if (userExist) {
             return res.status(400).json({
@@ -33,29 +35,33 @@ export const register = async (req, res) => {
             });
         }
 
-        // Tetapkan role admin jika kriteria terpenuhi
-        const userCount = await User.countDocuments();
-        const emailAdmin = "kopisusu8ip@gmail.com"; // Email admin default
-        const role = userCount < 1 || email === emailAdmin ? "admin" : "user";
+        // Hash password before saving
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Buat user baru dengan role yang ditentukan
+        // Set role based on admin email and telegram
+        let role = "user";
+        if (email === process.env.ADMIN_EMAIL && telegram === process.env.ADMIN_TELEGRAM) {
+            role = "admin";
+        }
+
+        // Create new user
         const user = await User.create({
             name,
             email,
-            phone,
-            password, // Kirim password mentah
+            telegram,
+            password: hashedPassword,
             role
         });
 
-        // Buat response user tanpa password
+        // Prepare response without sensitive data
         const userData = {
             name: user.name,
             email: user.email,
-            phone: user.phone,
+            telegram: user.telegram,
             role: user.role
         };
 
-        // Kirim response berhasil
         return res.status(201).json({
             success: true,
             data: userData
@@ -64,7 +70,7 @@ export const register = async (req, res) => {
         console.error(error);
         return res.status(500).json({
             success: false,
-            message: error.message || "Server error occurred"
+            error: error.message
         });
     }
 };
@@ -72,10 +78,10 @@ export const register = async (req, res) => {
 export const updateUser = async (req, res) => {
     try {
         const id = req.params.id;
-        const { name, email, phone, password } = req.body;
+        const { name, email, telegram, password } = req.body;
         const user = await User.findByIdAndUpdate(
             id,
-            { name, email, phone, password },
+            { name, email, telegram, password },
             { new: true }
         );
         res.status(200).json(user);
