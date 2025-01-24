@@ -38,7 +38,7 @@ app.use((err, req, res, next) => {
 // createDummyTransactions();
 
 // Start the server
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 app.listen(port, () => {
   console.log(`Server is running on port http://localhost:${port}`);
 });

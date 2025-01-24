@@ -1,5 +1,6 @@
 import User from "../../models/userModel.js";
 import validator from "validator";
+import userSchema, { validateUser } from "../../models/userModel.js";
 import bcrypt from "bcryptjs";
 
 export const getUser = async (req, res) => {
@@ -16,15 +17,16 @@ export const register = async (req, res) => {
     try {
         const { name, email, telegram, password } = req.body;
 
-        // Input validation
-        if (!name || !email || !telegram || !password) {
+        // Validasi input menggunakan Joi
+        const { error } = validateUser(req.body);
+        if (error) {
             return res.status(400).json({
                 success: false,
-                message: "All fields are required"
+                message: error.details[0].message
             });
         }
 
-        // Check if user already exists
+        // Periksa apakah pengguna sudah ada
         const userExist = await User.findOne({
             $or: [{ telegram }, { email }]
         });
@@ -35,17 +37,17 @@ export const register = async (req, res) => {
             });
         }
 
-        // Hash password before saving
+        // Hash password sebelum menyimpan
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Set role based on admin email and telegram
+        // Set role berdasarkan email dan telegram admin
         let role = "user";
         if (email === process.env.ADMIN_EMAIL && telegram === process.env.ADMIN_TELEGRAM) {
             role = "admin";
         }
 
-        // Create new user
+        // Buat pengguna baru
         const user = await User.create({
             name,
             email,
@@ -54,7 +56,7 @@ export const register = async (req, res) => {
             role
         });
 
-        // Prepare response without sensitive data
+        // Data yang akan dikirimkan dalam respons tanpa data sensitif
         const userData = {
             name: user.name,
             email: user.email,

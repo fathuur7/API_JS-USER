@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import Joi from "joi";
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -45,6 +46,19 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.comparePassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// Fungsi untuk validasi menggunakan Joi
+export const validateUser = (data) => {
+    const schema = Joi.object({
+        name: Joi.string().min(3).max(40).required(),
+        email: Joi.string().email().required(),
+        telegram: Joi.string().min(3).required(),
+        password: Joi.string().min(6).required(),
+        role: Joi.string().valid("user", "admin").optional().default("user"), 
+    });
+    return schema.validate(data);
+};
+
 
 const User = mongoose.model("User", userSchema);
 
