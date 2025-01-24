@@ -59,6 +59,15 @@ export const validateUser = (data) => {
     return schema.validate(data);
 };
 
+// Fungsi untuk validasi input login menggunakan Joi
+export const validateLogin = (data) => {
+    const schema = Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().required(),
+    });
+    return schema.validate(data);
+};
+
 
 const User = mongoose.model("User", userSchema);
 
