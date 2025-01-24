@@ -2,6 +2,8 @@ import User from "../../models/userModel.js";
 import validator from "validator";
 import userSchema, { validateUser } from "../../models/userModel.js";
 import bcrypt from "bcryptjs";
+import Joi from "joi";
+import jwt from "jsonwebtoken";
 
 export const getUser = async (req, res) => {
     try {
@@ -37,10 +39,6 @@ export const register = async (req, res) => {
             });
         }
 
-        // Hash password sebelum menyimpan
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
         // Set role berdasarkan email dan telegram admin
         let role = "user";
         if (email === process.env.ADMIN_EMAIL && telegram === process.env.ADMIN_TELEGRAM) {
@@ -52,7 +50,7 @@ export const register = async (req, res) => {
             name,
             email,
             telegram,
-            password: hashedPassword,
+            password,
             role
         });
 
@@ -93,48 +91,52 @@ export const updateUser = async (req, res) => {
 };
 
 
+// Fungsi untuk validasi input login menggunakan Joi
+const validateLogin = (data) => {
+    const schema = Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().required(),
+    });
+    return schema.validate(data);
+};
+
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        
-        // Validasi input
-        if (!email || !password) {
+
+        // Validasi input menggunakan Joi
+        const { error } = validateLogin(req.body);
+        if (error) {
             return res.status(400).json({
                 success: false,
-                message: "All fields are required"
+                message: error.details[0].message,
             });
         }
 
-        if (!validator.isEmail(email)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid email format"
-            });
-        }
-
-        // Cek apakah user sudah ada
+        // Cek apakah pengguna ada di database
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({
                 success: false,
-                message: "User not found"
+                message: "Invalid email or password",
             });
         }
 
-        // Cek password
+        // Cek apakah password cocok
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
-                message: "Invalid password"
+                message: "Invalid email or password",
             });
         }
 
-        // Buat token
+        // Buat token JWT
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-            expiresIn: "1d"
+            expiresIn: "1d",
         });
 
+        // Berikan respons dengan token dan data pengguna
         return res.status(200).json({
             success: true,
             message: "Login successful",
@@ -142,18 +144,18 @@ export const login = async (req, res) => {
             user: {
                 name: user.name,
                 email: user.email,
-                role: user.role
-            }
+                role: user.role,
+            },
         });
     } catch (error) {
         console.error("Login error:", error.message);
         return res.status(500).json({
             success: false,
-            message: "Server error"
+            message: "Server error",
+            error: error.message,
         });
     }
 };
-
 
 export const deleteUser = async (req, res) => {
     try {
