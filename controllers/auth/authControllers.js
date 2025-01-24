@@ -56,10 +56,8 @@ export const register = async (req, res) => {
             role
         });
 
-        // Data yang akan dikirimkan dalam respons tanpa data sensitif
         const userData = {
             name: user.name,
-            email: user.email,
             telegram: user.telegram,
             role: user.role
         };
