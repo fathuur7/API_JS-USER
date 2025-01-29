@@ -1,6 +1,6 @@
 import User from "../../models/userModel.js";
 import validator from "validator";
-import userSchema, { validateUser } from "../../models/userModel.js";
+import userSchema, { validateUser , validateLogin } from "../../models/userModel.js";
 import bcrypt from "bcryptjs";
 import Joi from "joi";
 import jwt from "jsonwebtoken";
@@ -91,20 +91,12 @@ export const updateUser = async (req, res) => {
 };
 
 
-// Fungsi untuk validasi input login menggunakan Joi
-const validateLogin = (data) => {
-    const schema = Joi.object({
-        email: Joi.string().email().required(),
-        password: Joi.string().required(),
-    });
-    return schema.validate(data);
-};
 
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Validasi input menggunakan Joi
+        // Validasi input
         const { error } = validateLogin(req.body);
         if (error) {
             return res.status(400).json({
@@ -122,7 +114,7 @@ export const login = async (req, res) => {
             });
         }
 
-        // Cek apakah password cocok
+        // Cek password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({
@@ -136,11 +128,17 @@ export const login = async (req, res) => {
             expiresIn: "1d",
         });
 
-        // Berikan respons dengan token dan data pengguna
+        // Simpan token di cookies
+        res.cookie("token", token, {
+            httpOnly: true,  // Mencegah akses dari JavaScript (lebih aman)
+            secure: process.env.NODE_ENV === "production",  // Hanya gunakan HTTPS di production
+            sameSite: "Strict",  // Mencegah pengiriman cookies ke domain lain
+            maxAge: 24 * 60 * 60 * 1000, // Expire dalam 1 hari
+        });
+
         return res.status(200).json({
             success: true,
             message: "Login successful",
-            token,
             user: {
                 name: user.name,
                 email: user.email,
@@ -156,6 +154,8 @@ export const login = async (req, res) => {
         });
     }
 };
+
+
 
 export const deleteUser = async (req, res) => {
     try {

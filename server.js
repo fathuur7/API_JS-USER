@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // CORS Middleware
 const corsOptions = {
-  origin: ["http://localhost:3001", "http://192.168.1.9:3001"],
+  origin: ["http://localhost:3000"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };
