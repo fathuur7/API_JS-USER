@@ -5,6 +5,8 @@ import connectDB from "./config/db.js";
 import authRoutes from './routes/auth/authRoutes.js';
 import { Transaction, createDummyTransactions } from './models/transactionModel.js';
 import productRoutes from './routes/product/productRoutes.js';
+import userRoutes from './routes/users/userRoutes.js';
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 const app = express();
@@ -15,6 +17,7 @@ connectDB();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // CORS Middleware
 const corsOptions = {
@@ -27,6 +30,7 @@ app.use(cors(corsOptions));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/users', userRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

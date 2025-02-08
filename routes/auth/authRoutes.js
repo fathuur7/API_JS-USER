@@ -1,6 +1,7 @@
 // crud routes
 import express from "express";
-import { register, login, getUser, updateUser, deleteUser } from "../../controllers/auth/authControllers.js";
+import {register, login, getUser, updateUser, deleteUser , logout } from "../../controllers/auth/authControllers.js";
+import authMiddleware from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -20,5 +21,8 @@ router.put('/users/:id', updateUser);
 // menghapus User
 router.delete('/users/:id', deleteUser);
 
+router.post('/logout', logout);
+
+// router.get("/me", authMiddleware, getCurrentUser);
 
 export default router;

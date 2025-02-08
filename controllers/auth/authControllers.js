@@ -1,8 +1,7 @@
 import User from "../../models/userModel.js";
-import validator from "validator";
-import userSchema, { validateUser , validateLogin } from "../../models/userModel.js";
+import { validateUser , validateLogin } from "../../models/userModel.js";
 import bcrypt from "bcryptjs";
-import Joi from "joi";
+// import Joi from "joi";
 import jwt from "jsonwebtoken";
 
 export const getUser = async (req, res) => {
@@ -12,6 +11,29 @@ export const getUser = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }    
+};
+
+
+export const getUserProfile = async (req, res) => {
+    try {
+        // Ambil token dari cookie
+        const token = req.cookies.token;
+        if (!token) {
+            return res.status(401).json({ message: "Not authenticated" });
+        }
+
+        // Verifikasi token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id).select("-password"); // Jangan kirim password ke frontend
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(401).json({ message: "Invalid token" });
+    }
 };
 
 
@@ -155,7 +177,20 @@ export const login = async (req, res) => {
     }
 };
 
+// Backend - controller/authController.js
+export const logout = async (req, res) => {
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict",
+        path: "/",
+    });
 
+    return res.status(200).json({
+        success: true,
+        message: "Logged out successfully",
+    });
+};
 
 export const deleteUser = async (req, res) => {
     try {
