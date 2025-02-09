@@ -3,6 +3,7 @@ import { validateUser , validateLogin } from "../../models/userModel.js";
 import bcrypt from "bcryptjs";
 // import Joi from "joi";
 import jwt from "jsonwebtoken";
+import { uploadMultiple , upload } from "../../config/uploadConfig.js";
 
 export const getUser = async (req, res) => {
     try {
@@ -98,14 +99,23 @@ export const register = async (req, res) => {
 export const updateUser = async (req, res) => {
     try {
         const id = req.params.id;
-        const { name, email, telegram, password } = req.body;
-        const user = await User.findByIdAndUpdate(
-            id,
-            { name, email, telegram, password },
-            { new: true }
-        );
-        res.status(200).json(user);
+        const { name, email, telegram, password, location, aboutme, avalaible } = req.body;
 
+        // Cek apakah ada file gambar yang diunggah
+        let updateData = { name, email, telegram, password, location, aboutme, avalaible };
+
+        if (req.files) {
+            if (req.files.image) {
+                updateData.image = req.files.image[0].path; // URL dari Cloudinary
+            }
+            if (req.files.background) {
+                updateData.background = req.files.background[0].path; // URL dari Cloudinary
+            }
+        }
+
+        const user = await User.findByIdAndUpdate(id, updateData, { new: true });
+
+        res.status(200).json(user);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: error.message });

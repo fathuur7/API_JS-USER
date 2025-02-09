@@ -1,7 +1,7 @@
 // crud routes
 import express from "express";
 import {register, login, getUser, updateUser, deleteUser , logout } from "../../controllers/auth/authControllers.js";
-import authMiddleware from "../../middleware/authMiddleware.js";
+
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ router.post('/login', login);
 router.get('/users', getUser);
 
 //mengubah User
-router.put('/users/:id', updateUser);
+
 
 // menghapus User
 router.delete('/users/:id', deleteUser);

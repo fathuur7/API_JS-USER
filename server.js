@@ -19,6 +19,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+
 // CORS Middleware
 const corsOptions = {
   origin: ["http://localhost:3000"],

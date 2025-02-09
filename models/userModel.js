@@ -3,6 +3,25 @@ import bcrypt from "bcryptjs";
 import Joi from "joi";
 
 const userSchema = new mongoose.Schema({
+    background : {
+        type: String,
+        // required: true
+    },
+    image : {
+        type: String,
+    },
+    location: {
+        type: String,
+        // required: true
+    },
+    aboutme : {
+        type: String,
+        // required: true
+    },
+    avalaible : {
+        type: String,
+        // required: true
+    },
     name: {
         type: String,
         required: true
@@ -55,6 +74,10 @@ export const validateUser = (data) => {
         telegram: Joi.string().min(3).required(),
         password: Joi.string().min(6).required(),
         role: Joi.string().valid("user", "admin").optional().default("user"), 
+        location: Joi.string().required(),
+        aboutme: Joi.string().required(),
+        avalaible: Joi.string().required(),
+        image: Joi.string().required(),
     });
     return schema.validate(data);
 };
@@ -68,6 +91,10 @@ export const validateLogin = (data) => {
     return schema.validate(data);
 };
 
+userSchema.set("toJSON", { virtuals: true });
+userSchema.virtual("id").get(function () {
+    return this._id.toHexString();
+});
 
 const User = mongoose.model("User", userSchema);
 
