@@ -178,10 +178,7 @@ export const authService = {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email,
-        role: user.role,
-        googleProfilePic: user.googleProfilePic,
-        isActive: user.isActive
+        email: user.email
       }
     };
   },

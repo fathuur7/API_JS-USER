@@ -51,7 +51,7 @@ export const authController = {
   async refreshToken(req, res) {
     try {
       // Get refresh token from cookie or request body
-      const refreshToken = req.cookies['refreshToken'] || req.body['refreshToken'];
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
       
       if (!refreshToken) {
         return res.status(400).json({
@@ -113,6 +113,7 @@ export const authController = {
     try {
       // User info is already attached to req by auth middleware
       const { user } = req;
+      
       return res.json({
         success: true,
         message: 'User profile retrieved successfully',
