@@ -1,217 +1,136 @@
-import User from "../../models/userModel.js";
-import { validateUser , validateLogin } from "../../models/userModel.js";
-import bcrypt from "bcryptjs";
-// import Joi from "joi";
-import jwt from "jsonwebtoken";
-import { uploadMultiple , upload } from "../../config/uploadConfig.js";
+// controllers/authController.js
+import { authService } from '../../services/auth/authService.js';
 
-export const getUser = async (req, res) => {
+export const authController = {
+  /**
+   * Google OAuth login/register
+   */
+  async googleLogin(req, res) {
     try {
-        const users = await User.find();
-        res.status(200).json(users);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }    
-};
-
-
-export const getUserProfile = async (req, res) => {
-    try {
-        // Ambil token dari cookie
-        const token = req.cookies.token;
-        if (!token) {
-            return res.status(401).json({ message: "Not authenticated" });
-        }
-
-        // Verifikasi token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.id).select("-password"); // Jangan kirim password ke frontend
-
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        res.status(200).json(user);
-    } catch (error) {
-        res.status(401).json({ message: "Invalid token" });
-    }
-};
-
-
-export const register = async (req, res) => {
-    try {
-        const { name, email, telegram, password } = req.body;
-
-        // Validasi input menggunakan Joi
-        const { error } = validateUser(req.body);
-        if (error) {
-            return res.status(400).json({
-                success: false,
-                message: error.details[0].message
-            });
-        }
-
-        // Periksa apakah pengguna sudah ada
-        const userExist = await User.findOne({
-            $or: [{ telegram }, { email }]
+      const { token } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Google token is required' 
         });
-        if (userExist) {
-            return res.status(400).json({
-                success: false,
-                message: "User already exists"
-            });
-        }
-
-        // Set role berdasarkan email dan telegram admin
-        let role = "user";
-        if (email === process.env.ADMIN_EMAIL && telegram === process.env.ADMIN_TELEGRAM) {
-            role = "admin";
-        }
-
-        // Buat pengguna baru
-        const user = await User.create({
-            name,
-            email,
-            telegram,
-            password,
-            role
-        });
-
-        const userData = {
-            name: user.name,
-            telegram: user.telegram,
-            role: user.role
-        };
-
-        return res.status(201).json({
-            success: true,
-            data: userData
-        });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-};
-
-export const updateUser = async (req, res) => {
-    try {
-        const id = req.params.id;
-        const { name, email, telegram, password, location, aboutme, avalaible } = req.body;
-
-        // Cek apakah ada file gambar yang diunggah
-        let updateData = { name, email, telegram, password, location, aboutme, avalaible };
-
-        if (req.files) {
-            if (req.files.image) {
-                updateData.image = req.files.image[0].path; // URL dari Cloudinary
-            }
-            if (req.files.background) {
-                updateData.background = req.files.background[0].path; // URL dari Cloudinary
-            }
-        }
-
-        const user = await User.findByIdAndUpdate(id, updateData, { new: true });
-
-        res.status(200).json(user);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: error.message });
-    }
-};
-
-
-
-export const login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        // Validasi input
-        const { error } = validateLogin(req.body);
-        if (error) {
-            return res.status(400).json({
-                success: false,
-                message: error.details[0].message,
-            });
-        }
-
-        // Cek apakah pengguna ada di database
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "Invalid email or password",
-            });
-        }
-
-        // Cek password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid email or password",
-            });
-        }
-
-        // Buat token JWT
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-            expiresIn: "1d",
-        });
-
-        // Simpan token di cookies
-        res.cookie("token", token, {
-            httpOnly: true,  // Mencegah akses dari JavaScript (lebih aman)
-            secure: process.env.NODE_ENV === "production",  // Hanya gunakan HTTPS di production
-            sameSite: "Strict",  // Mencegah pengiriman cookies ke domain lain
-            maxAge: 24 * 60 * 60 * 1000, // Expire dalam 1 hari
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Login successful",
-            user: {
-                name: user.name,
-                email: user.email,
-                role: user.role,
-            },
-        });
-    } catch (error) {
-        console.error("Login error:", error.message);
-        return res.status(500).json({
-            success: false,
-            message: "Server error",
-            error: error.message,
-        });
-    }
-};
-
-// Backend - controller/authController.js
-export const logout = async (req, res) => {
-    res.clearCookie("token", {
+      }
+      
+      const authData = await authService.googleLogin(token, req);
+      
+      // Set HTTP-only cookie for refresh token
+      res.cookie('refreshToken', authData.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict",
-        path: "/",
-    });
-
-    return res.status(200).json({
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        sameSite: 'strict'
+      });
+      
+      return res.json({
         success: true,
-        message: "Logged out successfully",
-    });
+        message: 'Login successful',
+        data: {
+          accessToken: authData.accessToken,
+          user: authData.user
+        }
+      });
+    } catch (error) {
+      console.error('Google login error:', error);
+      return res.status(401).json({
+        success: false,
+        message: error.message || 'Authentication failed'
+      });
+    }
+  },
+  
+  /**
+   * Refresh access token using refresh token
+   */
+  async refreshToken(req, res) {
+    try {
+      // Get refresh token from cookie or request body
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      
+      if (!refreshToken) {
+        return res.status(400).json({
+          success: false,
+          message: 'Refresh token is required'
+        });
+      }
+      
+      const result = await authService.refreshToken(refreshToken, req);
+      
+      return res.json({
+        success: true,
+        message: 'Token refreshed successfully',
+        data: {
+          accessToken: result.accessToken,
+          user: result.user
+        }
+      });
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      return res.status(401).json({
+        success: false,
+        message: error.message || 'Token refresh failed'
+      });
+    }
+  },
+  
+  /**
+   * Logout user - invalidate tokens
+   */
+  async logout(req, res) {
+    try {
+      // Get tokens from headers, cookies, or request body
+      const accessToken = req.headers.authorization?.split(' ')[1] || req.body.accessToken;
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      
+      await authService.logout(accessToken, refreshToken);
+      
+      // Clear refresh token cookie
+      res.clearCookie('refreshToken');
+      
+      return res.json({
+        success: true,
+        message: 'Logged out successfully'
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Logout failed'
+      });
+    }
+  },
+  
+  /**
+   * Get current user profile
+   */
+  async getCurrentUser(req, res) {
+    try {
+      // User info is already attached to req by auth middleware
+      const { user } = req;
+      
+      return res.json({
+        success: true,
+        data: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          googleProfilePic: user.googleProfilePic,
+          isActive: user.isActive
+        }
+      });
+    } catch (error) {
+      console.error('Get current user error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to get user profile'
+      });
+    }
+  }
 };
 
-export const deleteUser = async (req, res) => {
-    try {
-        const userId = req.user.id; 
-        const user = await User.findByIdAndDelete(userId);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        res.status(200).json({ message: "User deleted successfully" });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: error.message });
-    }  
-};
+export default authController;

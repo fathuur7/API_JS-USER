@@ -3,9 +3,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import authRoutes from './routes/auth/authRoutes.js';
-import { Transaction, createDummyTransactions } from './models/transactionModel.js';
-import productRoutes from './routes/product/productRoutes.js';
-import userRoutes from './routes/users/userRoutes.js';
 import cookieParser from "cookie-parser";
 
 dotenv.config();

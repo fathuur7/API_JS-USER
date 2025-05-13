@@ -1,26 +1,27 @@
+// models/User.js
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import Joi from "joi";
 
 const userSchema = new mongoose.Schema({
-    background : {
+    googleProfilePic: {
         type: String,
-        // required: true
     },
-    image : {
+    googleId: {
         type: String,
+        sparse: true, 
+        index: true,  // Index for faster queries
     },
     location: {
         type: String,
-        // required: true
     },
-    aboutme : {
-        type: String,
-        // required: true
+    isActive: {
+        type: Boolean,
+        default: false
     },
-    avalaible : {
-        type: String,
-        // required: true
+    lastSeen: {
+        type: Date,
+        default: Date.now
     },
     name: {
         type: String,
@@ -31,14 +32,12 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
-    telegram: {
-        type: String,
-        required: true,
-        unique: true
-    },
     password: {
         type: String,
-        required: true
+        required: function() {
+            // Password hanya wajib jika login tanpa Google
+            return !this.googleId;
+        }
     },
     role: {
         type: String,
@@ -48,12 +47,22 @@ const userSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    validationCode: {
+        type: String,
+        default: null
+    },
+    loginType: {
+        type: String,
+        enum: ["local", "google"],
+        default: "local"
     }
 });
 
 // Middleware untuk hash password sebelum menyimpan
 userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) {
+    // Skip hash jika password tidak dimodifikasi atau jika Google login
+    if (!this.isModified("password") || this.googleId) {
         return next();
     }
     const salt = await bcrypt.genSalt(10);
@@ -63,21 +72,38 @@ userSchema.pre("save", async function (next) {
 
 // Metode untuk membandingkan password
 userSchema.methods.comparePassword = async function (enteredPassword) {
+    // Jika user login via Google dan tidak punya password
+    if (this.googleId && !this.password) {
+        return false;
+    }
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Fungsi untuk validasi menggunakan Joi
+// Fungsi untuk validasi registrasi user local
 export const validateUser = (data) => {
     const schema = Joi.object({
         name: Joi.string().min(3).max(40).required(),
         email: Joi.string().email().required(),
-        telegram: Joi.string().min(3).required(),
         password: Joi.string().min(6).required(),
-        role: Joi.string().valid("user", "admin").optional().default("user"), 
-        location: Joi.string().required(),
-        aboutme: Joi.string().required(),
-        avalaible: Joi.string().required(),
-        image: Joi.string().required(),
+        location: Joi.string().optional(),
+        role: Joi.string().valid("user", "admin").optional().default("user"),
+        googleProfilePic: Joi.string().optional(),
+        isActive: Joi.boolean().optional().default(false),
+        validationCode: Joi.string().optional().allow(null),
+    });
+    return schema.validate(data);
+};
+
+// Fungsi untuk validasi registrasi user Google
+export const validateGoogleUser = (data) => {
+    const schema = Joi.object({
+        name: Joi.string().min(3).max(40).required(),
+        email: Joi.string().email().required(),
+        googleId: Joi.string().required(),
+        googleProfilePic: Joi.string().optional(),
+        location: Joi.string().optional(),
+        role: Joi.string().valid("user", "admin").optional().default("user"),
+        isActive: Joi.boolean().optional().default(true),
     });
     return schema.validate(data);
 };
