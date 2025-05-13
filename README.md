@@ -18,7 +18,7 @@ A robust authentication service built with Express.js and MongoDB that provides 
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/API_JS-USER.git
+git clone https://github.com/fathuur7/API_JS-USER.git
 cd API_JS-USER
 
 # Install dependencies
