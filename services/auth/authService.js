@@ -97,7 +97,7 @@ export const authService = {
         googleId: googleUserInfo.googleId,
         googleProfilePic: googleUserInfo.picture,
         isActive: true,
-        loginType: 'google'
+        // loginType: 'google'
       };
       
       // Validate user data
@@ -122,6 +122,9 @@ export const authService = {
     
     // Update last seen
     user.lastSeen = new Date();
+    await user.save();
+
+    user.loginType = 'google';
     await user.save();
     
     // Generate JWT token

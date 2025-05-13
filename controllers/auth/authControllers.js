@@ -7,7 +7,8 @@ export const authController = {
    */
   async googleLogin(req, res) {
     try {
-      const { token } = req.body;
+      // Accept either token or id_token for compatibility
+      const token = req.body.token || req.body.id_token;
       
       if (!token) {
         return res.status(400).json({ 
@@ -23,7 +24,7 @@ export const authController = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'strict'
+        sameSite: 'lax' // Changed from 'strict' to allow cross-site requests during development
       });
       
       return res.json({
@@ -31,6 +32,7 @@ export const authController = {
         message: 'Login successful',
         data: {
           accessToken: authData.accessToken,
+          refreshToken: authData.refreshToken,
           user: authData.user
         }
       });
@@ -49,7 +51,7 @@ export const authController = {
   async refreshToken(req, res) {
     try {
       // Get refresh token from cookie or request body
-      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      const refreshToken = req.cookies['refreshToken'] || req.body['refreshToken'];
       
       if (!refreshToken) {
         return res.status(400).json({
@@ -111,17 +113,10 @@ export const authController = {
     try {
       // User info is already attached to req by auth middleware
       const { user } = req;
-      
       return res.json({
         success: true,
-        data: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          googleProfilePic: user.googleProfilePic,
-          isActive: user.isActive
-        }
+        message: 'User profile retrieved successfully',
+        data: user
       });
     } catch (error) {
       console.error('Get current user error:', error);
